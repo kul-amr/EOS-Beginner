@@ -144,7 +144,7 @@ upload the contract to blockchain now
 	Assembling WASM...
 	Publishing contract...
 	
-Create the token with
+Create the token with (authorized this action using the permission argument -p)
 
 	/eos/build$ cleos push action token create '{"issuer":"token","maximum_supply":"1000000.0000 AMRTKN"}' -p token
 
