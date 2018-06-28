@@ -4,6 +4,8 @@
 
 EOS dApp dev steps:
 
+Setup : 
+
 1. Clone the EOS git repo 
 
   	git clone https://github.com/EOSIO/eos.git --recursive
@@ -60,5 +62,142 @@ To execute the test cases, we need to start the  "Mongo Daemon" - the host proce
 
 This was fairly quick.
 
-Referred : https://developers.eos.io/eosio-nodeos/docs/build-validation , https://infinitexlabs.com/first-steps-in-eos-blockchain-development/ 
+Now, to launch node :
+
+1. started single node blockchain with command
+
+	nodeos -e -p eosio --plugin eosio::wallet_api_plugin --plugin eosio::chain_api_plugin --plugin 	eosio::history_api_plugin --contracts-console
+
+This started generating blocks 
+
+So here nodeos is the main command to start and you can use config options with that. Here , 
+-e ==> enables block production
+-p ==> provide ID of the block producer which would be controlled by this node
+--plugin ==> to enable various plugins 
+
+Now ,to validate the environment , lets try and run one example contract - eosio.token,  provided by EOS. For this, we need to create a wallet (which can be done by plugin command line option and that is why we have added eosio::wallet_api_plugin 
+while starting our test node).
+
+	:~$ cd ~/eos/build/programs/cleos/
+	/eos/build/programs/cleos$ cleos wallet create -n <wallet-name>
+	"/usr/local/bin/keosd" launched
+	Creating wallet: <wallet-name>
+	Save password to use in the future to unlock this wallet.
+	Without password imported keys will not be retrievable.
+	"the-password-string"
+
+After creating the wallet, import the eos private key which you can find in /.local/share/eosio/nodeos/config.ini 
+under tag "signature-provider" which is tuple of [public key, WIF private key] . 
+
+Then create a public -private keypair with below commandwhich would be used as owner key. Also create one more key to use as active key for account creation.
+
+	/eos/build/programs/cleos$     cleos create key
+	Private key: <private-key>
+	Public key: <public-key>
+
+You can see the created wallet, keys etc with below commands :
+
+	/eos/build/programs/cleos$ cleos wallet list
+	Wallets:
+	[
+	  "<wallet-name> *"
+	]
+
+	/eos/build/programs/cleos$ cleos wallet keys
+	[
+	  "<publick-key>"
+	]
+
+	/eos/build/programs/cleos$ cleos wallet private_keys -n <wallet-name>
+	password: [[
+	    "<publick-key>",
+	    "<private-key>"
+	  ]
+	]
+
+Import the owner key and active key to wallet : 
+
+	/eos/build/programs/cleos$ cleos wallet import -n <wallet-name>  <private-key>
+	imported private key for: <publick-key>
+
+Now, to create account 
+
+	/eos/build/programs/cleos$ cleos create account eosio token <publick-owner-key> <publick-active-key>
+	executed transaction: 4703f600865488eda6bb82fba43e41a56764e4399dc53659d36c7bb61cd9e1e4  200 bytes  334 us
+	#         eosio <= eosio::newaccount            {"creator":"eosio","name":"token","owner":{"threshold":1,"keys":...
+	warning: transaction executed locally, but may not be confirmed by the network yet
+
+Check if the account is created properly with command :
+
+	/eos/build/programs/cleos$ cleos get account token --json
+	{
+	  "account_name": "token",
+	  "head_block_num": 20168,
+	  "head_block_time": "2018-06-28T12:42:03.000",
+	.
+	.
+	
+upload the contract to blockchain now 
+
+	/eos/build$ cleos set contract token ./contracts/eosio.token/ ./contracts/eosio.token/eosio.token.wast ./contracts/eosio.token/eosio.token.abi
+	Reading WAST/WASM from ./contracts/eosio.token/eosio.token.wast...
+	Assembling WASM...
+	Publishing contract...
+	
+Create the token with
+
+	/eos/build$ cleos push action token create '{"issuer":"token","maximum_supply":"1000000.0000 AMRTKN"}' -p token
+
+Issue the tokens with
+
+	/eos/build$ cleos push action token issue '{"to":"token","quantity":"1000.0000 AMRTKN","memo":""}' -p token
+
+Check the balance to see if the tokens are issued 
+
+	/eos/build$ cleos get table token token accounts
+	{
+	  "rows": [{
+	      "balance": "1000.0000 AMRTKN"
+	    }
+	  ],
+	  "more": false
+	}
+	
+Now we can try to transfer some amount 
+
+	/eos/build$ cleos push action token transfer '{"from":"token","to":"eosio","quantity":"10.0000 AMRTKN", "memo":"testing my first transfer"}' -p token
+	executed transaction: 5d656c0aa739d57e1d351c5a72f75c478607b0a7959fc22ba8065bfb70eaf6d6  152 bytes  1195 us
+	#         token <= token::transfer              {"from":"token","to":"eosio","quantity":"10.0000 AMRTKN","memo":"testing my first transfer"}
+	#         eosio <= token::transfer              {"from":"token","to":"eosio","quantity":"10.0000 AMRTKN","memo":"testing my first transfer"}
+	warning: transaction executed locally, but may not be confirmed by the network yet
+	
+check if the amount is deducted from token account 
+
+	/eos/build$ cleos get table token token accounts
+	{
+	  "rows": [{
+	      "balance": "990.0000 AMRTKN"
+	    }
+	  ],
+	  "more": false
+	}
+
+We can see that before transfer the amount in token account was 1000 and now 990. The amount in eosio account now is 10.
+
+	/eos/build$ cleos get table token eosio accounts
+	{
+	  "rows": [{
+	      "balance": "10.0000 AMRTKN"
+	    }
+	  ],
+	  "more": false
+	}
+
+
+
+
+
+
+
+Referred : https://developers.eos.io/eosio-nodeos/docs/build-validation , https://infinitexlabs.com/first-steps-in-eos-blockchain-development/ , https://github.com/EOSIO/eos/wiki/Tutorial-eosio-token-Contract
 
