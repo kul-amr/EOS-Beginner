@@ -24,7 +24,7 @@ Setup :
   
   When I executed this, it had shown  "/bin/dash" . So instead, I used below command to execute  eosio_build.sh
   
-  bash eosio_build.sh darwin
+  	bash eosio_build.sh darwin
   
   The output for above command populates the system info like OS, CPU, Disk etc. The execution will only start if 
   20GB storage is available else the script will exit with below output 
